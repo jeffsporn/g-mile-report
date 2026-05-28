@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>G Mile Services LLC — Cash Flow Analysis</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  :root {
+    --navy: #1a2540;
+    --navy-mid: #2c3e60;
+    --navy-light: #3d5280;
+    --teal: #0e7c6a;
+    --teal-light: #d0f0ea;
+    --coral: #c0392b;
+    --coral-light: #fde8e6;
+    --amber: #b45309;
+    --amber-light: #fef3c7;
+    --blue: #1d4ed8;
+    --blue-light: #dbeafe;
+    --green: #15803d;
+    --green-light: #dcfce7;
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-300: #d1d5db;
+    --gray-500: #6b7280;
+    --gray-700: #374151;
+    --gray-900: #111827;
+    --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    --mono: 'Consolas', 'Monaco', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font); background: var(--gray-50); color: var(--gray-900); font-size: 14px; }
+
+  /* Header */
+  .page-header {
+    background: var(--navy);
+    color: white;
+    padding: 28px 40px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+  .page-header h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.3px; }
+  .page-header .sub { font-size: 13px; color: rgba(255,255,255,0.65); margin-top: 4px; }
+  .page-header .meta { text-align: right; font-size: 12px; color: rgba(255,255,255,0.55); line-height: 1.8; }
+
+  /* Nav tabs */
+  .tabs { background: var(--navy-mid); display: flex; padding: 0 40px; gap: 2px; }
+  .tab-btn {
+    background: none; border: none; color: rgba(255,255,255,0.6);
+    padding: 11px 18px; font-size: 13px; cursor: pointer;
+    font-family: var(--font); border-bottom: 2px solid transparent;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .tab-btn:hover { color: rgba(255,255,255,0.9); }
+  .tab-btn.active { color: white; border-bottom-color: #60c0b0; }
+
+  /* Layout */
+  .page { display: none; padding: 32px 40px 48px; max-width: 1100px; }
+  .page.active { display: block; }
+
+  /* Section */
+  .section-title {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--gray-500);
+    margin: 28px 0 12px;
+  }
+  .section-title:first-child { margin-top: 0; }
+
+  /* Metric cards */
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 28px; }
+  .card {
+    background: white; border: 1px solid var(--gray-200);
+    border-radius: 10px; padding: 16px 18px;
+  }
+  .card-label { font-size: 11px; color: var(--gray-500); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+  .card-value { font-size: 24px; font-weight: 700; color: var(--gray-900); font-variant-numeric: tabular-nums; }
+  .card-value.green { color: var(--teal); }
+  .card-value.red { color: var(--coral); }
+  .card-value.blue { color: var(--blue); }
+  .card-sub { font-size: 11px; color: var(--gray-500); margin-top: 3px; }
+
+  /* Tables */
+  .tbl-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid var(--gray-200); margin-bottom: 24px; }
+  table { width: 100%; border-collapse: collapse; background: white; font-size: 13px; }
+  thead th {
+    background: var(--gray-100); padding: 10px 14px;
+    text-align: left; font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.06em; color: var(--gray-500);
+    border-bottom: 1px solid var(--gray-200); white-space: nowrap;
+  }
+  thead th.r { text-align: right; }
+  tbody td { padding: 9px 14px; border-bottom: 1px solid var(--gray-100); vertical-align: middle; }
+  tbody td.r { text-align: right; font-variant-numeric: tabular-nums; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: var(--gray-50); }
+  .num-pos { color: var(--teal); font-weight: 600; }
+  .num-neg { color: var(--coral); font-weight: 600; }
+  .num-neu { color: var(--gray-700); }
+
+  /* Badges */
+  .badge {
+    display: inline-block; font-size: 10px; font-weight: 700;
+    padding: 2px 7px; border-radius: 99px; text-transform: uppercase;
+    letter-spacing: 0.04em; white-space: nowrap;
+  }
+  .badge-rev { background: var(--green-light); color: var(--green); }
+  .badge-fund { background: var(--amber-light); color: var(--amber); }
+  .badge-xfer { background: var(--blue-light); color: var(--blue); }
+  .badge-debit { background: var(--coral-light); color: var(--coral); }
+  .badge-credit { background: var(--teal-light); color: var(--teal); }
+  .badge-pass { background: var(--green-light); color: var(--green); }
+  .badge-fail { background: var(--coral-light); color: var(--coral); }
+
+  /* Charts */
+  .chart-card {
+    background: white; border: 1px solid var(--gray-200);
+    border-radius: 10px; padding: 20px 24px; margin-bottom: 24px;
+  }
+  .chart-title { font-size: 13px; font-weight: 600; color: var(--gray-700); margin-bottom: 16px; }
+  .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+  /* Txn filters */
+  .txn-controls { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; }
+  .txn-controls input[type=text] {
+    border: 1px solid var(--gray-300); border-radius: 7px;
+    padding: 7px 12px; font-size: 13px; width: 260px;
+    font-family: var(--font); color: var(--gray-900);
+  }
+  .txn-controls input:focus { outline: 2px solid #60c0b0; border-color: #60c0b0; }
+  .filter-btn {
+    background: white; border: 1px solid var(--gray-300); border-radius: 7px;
+    padding: 6px 12px; font-size: 12px; cursor: pointer; font-family: var(--font);
+    color: var(--gray-700); transition: background 0.1s, border-color 0.1s;
+  }
+  .filter-btn:hover { background: var(--gray-100); }
+  .filter-btn.active { background: var(--navy); border-color: var(--navy); color: white; }
+  .txn-count { font-size: 12px; color: var(--gray-500); margin-left: auto; }
+
+  /* Txn table specifics */
+  #txn-tbody td:first-child { font-variant-numeric: tabular-nums; color: var(--gray-500); font-size: 12px; }
+  .desc-cell { max-width: 280px; }
+  .flags-cell { display: flex; gap: 4px; flex-wrap: wrap; }
+
+  /* Positions / lenders */
+  .position-card {
+    background: white; border: 1px solid var(--gray-200);
+    border-radius: 10px; padding: 18px 20px; display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px;
+    margin-bottom: 10px;
+  }
+  .pos-label { font-size: 11px; color: var(--gray-500); font-weight: 600; text-transform: uppercase; margin-bottom: 3px; }
+  .pos-value { font-size: 15px; font-weight: 700; color: var(--gray-900); }
+  .pos-name { font-size: 15px; font-weight: 700; color: var(--navy); grid-column: 1 / -1; margin-bottom: 4px; }
+
+  /* Validation */
+  .val-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 24px; }
+  .val-card {
+    background: white; border: 1px solid var(--gray-200);
+    border-radius: 10px; padding: 14px 16px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .val-icon { font-size: 18px; }
+  .val-name { font-size: 13px; font-weight: 600; color: var(--gray-900); }
+  .val-status { font-size: 11px; }
+  .val-pass .val-icon::before { content: '✓'; color: var(--green); }
+  .val-fail .val-icon::before { content: '✗'; color: var(--coral); }
+
+  /* Pagination */
+  .pagination { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+  .page-btn {
+    background: white; border: 1px solid var(--gray-300); border-radius: 6px;
+    padding: 5px 11px; font-size: 12px; cursor: pointer; font-family: var(--font);
+    color: var(--gray-700);
+  }
+  .page-btn:hover:not(:disabled) { background: var(--gray-100); }
+  .page-btn:disabled { opacity: 0.4; cursor: default; }
+  .page-info { font-size: 12px; color: var(--gray-500); }
+
+  /* Responsive */
+  @media (max-width: 700px) {
+    .page-header, .tabs, .page { padding-left: 16px; padding-right: 16px; }
+    .chart-grid { grid-template-columns: 1fr; }
+    .position-card { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <div>
+    <h1>G Mile Services LLC</h1>
+    <div class="sub">JPMorgan Chase ••••8549 &nbsp;·&nbsp; Chase Business Complete Checking &nbsp;·&nbsp; Feb – Apr 2026</div>
+  </div>
+  <div class="meta">
+    Cash Flow Analysis &amp; Submission Data<br>
+    Generated May 28, 2026<br>
+    Case: 006Qk00000dW3FeIAK
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="showTab('summary')">Summary</button>
+  <button class="tab-btn" onclick="showTab('monthly')">Monthly</button>
+  <button class="tab-btn" onclick="showTab('transactions')">Transactions (324)</button>
+  <button class="tab-btn" onclick="showTab('obligations')">Obligations</button>
+  <button class="tab-btn" onclick="showTab('validation')">Lender Validation</button>
+</div>
+
+<!-- ═══════════════════════════════ SUMMARY ═══════════════════════════════ -->
+<div class="page active" id="tab-summary">
+
+  <div class="section-title">3-Month Overview (Feb – Apr 2026)</div>
+  <div class="cards">
+    <div class="card">
+      <div class="card-label">Total True Revenue</div>
+      <div class="card-value green">$195,354</div>
+      <div class="card-sub">3-month period</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Avg Monthly Revenue</div>
+      <div class="card-value green">$65,118</div>
+      <div class="card-sub">per month</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Avg Daily Balance</div>
+      <div class="card-value blue">$2,787</div>
+      <div class="card-sub">across period</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Total Transactions</div>
+      <div class="card-value">324</div>
+      <div class="card-sub">avg 31 deposits/mo</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Total Expenses</div>
+      <div class="card-value red">$240,654</div>
+      <div class="card-sub">$80,218/mo avg</div>
+    </div>
+    <div class="card">
+      <div class="card-label">NSF Fees</div>
+      <div class="card-value green">0</div>
+      <div class="card-sub">No overdrafts</div>
+    </div>
+  </div>
+
+  <div class="section-title">Financing Activity</div>
+  <div class="cards">
+    <div class="card">
+      <div class="card-label">Total Financing Proceeds</div>
+      <div class="card-value blue">$41,782</div>
+      <div class="card-sub">Loans & advances received</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Total Financing Payments</div>
+      <div class="card-value red">$17,654</div>
+      <div class="card-sub">Repayments made</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Financing Coverage Ratio</div>
+      <div class="card-value">9.0%</div>
+      <div class="card-sub">Payments ÷ revenue</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Returned Items</div>
+      <div class="card-value green">$0</div>
+      <div class="card-sub">No returned credits</div>
+    </div>
+  </div>
+
+  <div class="section-title">Statement Summary</div>
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Month</th><th>Bank</th><th>Account</th>
+          <th class="r">Total Deposits</th><th class="r">True Revenue</th>
+          <th class="r">Funding</th><th class="r">Transfers</th>
+          <th class="r">Avg Balance</th><th class="r">Deposit Count</th>
+          <th class="r">Negative Days</th><th class="r">NSF</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Apr 2026</strong></td>
+          <td>JPMorgan Chase</td><td>••••8549</td>
+          <td class="r">$73,821</td>
+          <td class="r num-pos">$50,754</td>
+          <td class="r">$22,567</td>
+          <td class="r">$500</td>
+          <td class="r">$2,979</td>
+          <td class="r">28</td>
+          <td class="r"><span style="color:var(--amber);font-weight:700">1</span></td>
+          <td class="r">0</td>
+        </tr>
+        <tr>
+          <td><strong>Mar 2026</strong></td>
+          <td>JPMorgan Chase</td><td>••••8549</td>
+          <td class="r">$96,494</td>
+          <td class="r num-pos">$83,731</td>
+          <td class="r">$11,763</td>
+          <td class="r">$1,000</td>
+          <td class="r">$2,782</td>
+          <td class="r">36</td>
+          <td class="r num-pos">0</td>
+          <td class="r">0</td>
+        </tr>
+        <tr>
+          <td><strong>Feb 2026</strong></td>
+          <td>Chase</td><td>••••8549</td>
+          <td class="r">$69,821</td>
+          <td class="r num-pos">$60,870</td>
+          <td class="r">$7,452</td>
+          <td class="r">$1,500</td>
+          <td class="r">$2,556</td>
+          <td class="r">29</td>
+          <td class="r num-pos">0</td>
+          <td class="r">0</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="chart-grid">
+    <div class="chart-card">
+      <div class="chart-title">Revenue by Month</div>
+      <div style="position:relative;height:220px">
+        <canvas id="revChart" role="img" aria-label="Monthly revenue bar chart"></canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Net Cash Flow by Month</div>
+      <div style="position:relative;height:220px">
+        <canvas id="netChart" role="img" aria-label="Net cash flow bar chart"></canvas>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════════ MONTHLY ═══════════════════════════════ -->
+<div class="page" id="tab-monthly">
+
+  <div class="section-title">February 2026</div>
+  <div class="cards">
+    <div class="card"><div class="card-label">Revenue</div><div class="card-value green">$60,870</div></div>
+    <div class="card"><div class="card-label">Financing Outflows</div><div class="card-value red">$5,869</div></div>
+    <div class="card"><div class="card-label">Net Cash Flow</div><div class="card-value red">−$6,096</div></div>
+    <div class="card"><div class="card-label">Avg Daily Balance</div><div class="card-value blue">$2,556</div></div>
+    <div class="card"><div class="card-label">Negative Balance Days</div><div class="card-value green">0</div></div>
+    <div class="card"><div class="card-label">Financing Coverage</div><div class="card-value">9.6%</div></div>
+  </div>
+
+  <div class="section-title">March 2026</div>
+  <div class="cards">
+    <div class="card"><div class="card-label">Revenue</div><div class="card-value green">$83,731</div></div>
+    <div class="card"><div class="card-label">Financing Outflows</div><div class="card-value red">$5,875</div></div>
+    <div class="card"><div class="card-label">Net Cash Flow</div><div class="card-value green">+$3,271</div></div>
+    <div class="card"><div class="card-label">Avg Daily Balance</div><div class="card-value blue">$2,782</div></div>
+    <div class="card"><div class="card-label">Negative Balance Days</div><div class="card-value green">0</div></div>
+    <div class="card"><div class="card-label">Financing Coverage</div><div class="card-value">7.0%</div></div>
+  </div>
+
+  <div class="section-title">April 2026</div>
+  <div class="cards">
+    <div class="card"><div class="card-label">Revenue</div><div class="card-value green">$50,754</div></div>
+    <div class="card"><div class="card-label">Financing Outflows</div><div class="card-value red">$5,910</div></div>
+    <div class="card"><div class="card-label">Net Cash Flow</div><div class="card-value green">+$2,308</div></div>
+    <div class="card"><div class="card-label">Avg Daily Balance</div><div class="card-value blue">$2,979</div></div>
+    <div class="card"><div class="card-label">Negative Balance Days</div><div class="card-value" style="color:var(--amber)">1</div></div>
+    <div class="card"><div class="card-label">Financing Coverage</div><div class="card-value">11.6%</div></div>
+  </div>
+
+  <div class="chart-card">
+    <div class="chart-title">Average Daily Balance by Month</div>
+    <div style="position:relative;height:200px">
+      <canvas id="balChart" role="img" aria-label="Average daily balance line chart"></canvas>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════════ TRANSACTIONS ═══════════════════════════════ -->
+<div class="page" id="tab-transactions">
+
+  <div class="txn-controls">
+    <input type="text" id="txn-search" placeholder="Search description…" oninput="filterTxns()">
+    <button class="filter-btn active" data-filter="all" onclick="setFilter(this,'all')">All</button>
+    <button class="filter-btn" data-filter="rev" onclick="setFilter(this,'rev')">Revenue</button>
+    <button class="filter-btn" data-filter="fund" onclick="setFilter(this,'fund')">Funding</button>
+    <button class="filter-btn" data-filter="xfer" onclick="setFilter(this,'xfer')">Transfers</button>
+    <button class="filter-btn" data-filter="credit" onclick="setFilter(this,'credit')">Credits</button>
+    <button class="filter-btn" data-filter="debit" onclick="setFilter(this,'debit')">Debits</button>
+    <span class="txn-count" id="txn-count">324 transactions</span>
+  </div>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Description</th>
+          <th>Category</th>
+          <th>Type</th>
+          <th>Flags</th>
+          <th class="r">Amount</th>
+        </tr>
+      </thead>
+      <tbody id="txn-tbody"></tbody>
+    </table>
+  </div>
+
+  <div class="pagination">
+    <button class="page-btn" id="btn-prev" onclick="changePage(-1)">← Prev</button>
+    <span class="page-info" id="page-info"></span>
+    <button class="page-btn" id="btn-next" onclick="changePage(1)">Next →</button>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════════ OBLIGATIONS ═══════════════════════════════ -->
+<div class="page" id="tab-obligations">
+
+  <div class="section-title">Existing Debt Positions (Full 3-Month Period)</div>
+
+  <div class="position-card">
+    <div class="pos-name">PayPal Debit</div>
+    <div>
+      <div class="pos-label">Total Paid (3 mo)</div>
+      <div class="pos-value num-neg">$15,808</div>
+    </div>
+    <div>
+      <div class="pos-label">Monthly Equivalent</div>
+      <div class="pos-value num-neg">$6,159/mo</div>
+    </div>
+    <div>
+      <div class="pos-label">Payment Frequency</div>
+      <div class="pos-value">Every 7 days</div>
+    </div>
+    <div>
+      <div class="pos-label">Active Period</div>
+      <div class="pos-value">Feb 6 – Apr 24, 2026</div>
+    </div>
+  </div>
+
+  <div class="position-card">
+    <div class="pos-name">Square Capital</div>
+    <div>
+      <div class="pos-label">Total Paid (3 mo)</div>
+      <div class="pos-value num-neg">$1,847</div>
+    </div>
+    <div>
+      <div class="pos-label">Monthly Equivalent</div>
+      <div class="pos-value num-neg">$667/mo</div>
+    </div>
+    <div>
+      <div class="pos-label">Payment Frequency</div>
+      <div class="pos-value">Every 4 days</div>
+    </div>
+    <div>
+      <div class="pos-label">Active Period</div>
+      <div class="pos-value">Feb 5 – Apr 29, 2026</div>
+    </div>
+  </div>
+
+  <div class="section-title" style="margin-top:28px">Combined Debt Summary</div>
+  <div class="cards">
+    <div class="card">
+      <div class="card-label">Total Monthly Obligations</div>
+      <div class="card-value red">$6,826</div>
+      <div class="card-sub">PayPal + Square combined</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Total Financing Payments (3 mo)</div>
+      <div class="card-value red">$17,654</div>
+      <div class="card-sub">All repayments</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Obligation-to-Revenue Ratio</div>
+      <div class="card-value">10.5%</div>
+      <div class="card-sub">$6,826 ÷ $65,118 avg rev</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Total Financing Received</div>
+      <div class="card-value blue">$41,782</div>
+      <div class="card-sub">Gross proceeds</div>
+    </div>
+  </div>
+
+  <div class="section-title">Observed Lender Transactions (Feb 2026)</div>
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Lender</th><th>Date Range</th><th>Frequency</th>
+          <th class="r">Total (Period)</th><th class="r">Monthly Equiv.</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>PayPal Debit</strong></td>
+          <td>Feb 6 – Feb 27, 2026</td>
+          <td>Weekly (7 days)</td>
+          <td class="r num-neg">$5,269</td>
+          <td class="r num-neg">$7,527</td>
+        </tr>
+        <tr>
+          <td><strong>Square Capital</strong></td>
+          <td>Feb 5 – Feb 9, 2026</td>
+          <td>Every 4 days</td>
+          <td class="r num-neg">$641</td>
+          <td class="r">—</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════════ VALIDATION ═══════════════════════════════ -->
+<div class="page" id="tab-validation">
+
+  <div class="section-title">Lender Eligibility Results</div>
+  <p style="color:var(--gray-500);font-size:13px;margin-bottom:20px">
+    All 7 lenders evaluated passed validation. No disqualifying factors were found in this submission.
+  </p>
+
+  <div class="val-grid">
+    <div class="val-card val-pass"><div class="val-icon"></div><div><div class="val-name">Credibly</div><div class="val-status num-pos">Passed</div></div></div>
+    <div class="val-card val-pass"><div class="val-icon"></div><div><div class="val-name">Fora</div><div class="val-status num-pos">Passed</div></div></div>
+    <div class="val-card val-pass"><div class="val-icon"></div><div><div class="val-name">Forward Financing</div><div class="val-status num-pos">Passed</div></div></div>
+    <div class="val-card val-pass"><div class="val-icon"></div><div><div class="val-name">Headway Capital</div><div class="val-status num-pos">Passed</div></div></div>
+    <div class="val-card val-pass"><div class="val-icon"></div><div><div class="val-name">Kapitus</div><div class="val-status num-pos">Passed</div></div></div>
+    <div class="val-card val-pass"><div class="val-icon"></div><div><div class="val-name">Libertas</div><div class="val-status num-pos">Passed</div></div></div>
+    <div class="val-card val-pass"><div class="val-icon"></div><div><div class="val-name">OnDeck</div><div class="val-status num-pos">Passed</div></div></div>
+  </div>
+
+  <div class="section-title">Document Metadata</div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Field</th><th>Value</th></tr></thead>
+      <tbody>
+        <tr><td>Document ID</td><td style="font-family:var(--mono);font-size:12px">e7dee80b-0869-4786-ab76-ba44c5873f9e</td></tr>
+        <tr><td>Status</td><td><span class="badge badge-pass">Completed</span></td></tr>
+        <tr><td>Categorization Method</td><td>Static</td></tr>
+        <tr><td>Created</td><td>May 28, 2026 at 14:42 UTC</td></tr>
+        <tr><td>Updated</td><td>May 28, 2026 at 14:42 UTC</td></tr>
+        <tr><td>Producer</td><td>WM-2b945712 (SecureWatermark)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section-title">Key Risk Indicators</div>
+  <div class="cards">
+    <div class="card">
+      <div class="card-label">NSF / Overdraft Fees</div>
+      <div class="card-value green">None</div>
+      <div class="card-sub">0 across all months</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Returned Items</div>
+      <div class="card-value green">$0</div>
+      <div class="card-sub">No returned credits</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Negative Balance Days</div>
+      <div class="card-value" style="color:var(--amber)">1</div>
+      <div class="card-sub">Apr 2026 only</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Revenue Trend</div>
+      <div class="card-value" style="color:var(--amber)">Mixed</div>
+      <div class="card-sub">Mar peak, Apr decline</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── Tab switching ──────────────────────────────────────────────────────────
+function showTab(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  event.target.classList.add('active');
+  if (name === 'transactions' && !txnsRendered) renderTxns();
+}
+
+// ── Charts ─────────────────────────────────────────────────────────────────
+const months = ['Feb 2026','Mar 2026','Apr 2026'];
+const revenues = [60870, 83731, 50754];
+const netFlows = [-6096, 3271, 2308];
+const avgBal = [2556, 2782, 2979];
+
+new Chart(document.getElementById('revChart'), {
+  type: 'bar',
+  data: {
+    labels: months,
+    datasets: [{ label: 'Revenue', data: revenues, backgroundColor: '#0e7c6a', borderRadius: 6 }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { display: false } },
+      y: { grid: { color: 'rgba(0,0,0,0.06)' },
+           ticks: { callback: v => '$' + (v/1000).toFixed(0) + 'k' } }
+    }
+  }
+});
+
+new Chart(document.getElementById('netChart'), {
+  type: 'bar',
+  data: {
+    labels: months,
+    datasets: [{
+      label: 'Net Cash Flow',
+      data: netFlows,
+      backgroundColor: netFlows.map(v => v >= 0 ? '#0e7c6a' : '#c0392b'),
+      borderRadius: 6
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { display: false } },
+      y: { grid: { color: 'rgba(0,0,0,0.06)' },
+           ticks: { callback: v => (v < 0 ? '-' : '') + '$' + Math.abs(v/1000).toFixed(1) + 'k' } }
+    }
+  }
+});
+
+new Chart(document.getElementById('balChart'), {
+  type: 'line',
+  data: {
+    labels: months,
+    datasets: [{
+      label: 'Avg Daily Balance',
+      data: avgBal,
+      borderColor: '#1d4ed8',
+      backgroundColor: 'rgba(29,78,216,0.08)',
+      borderWidth: 2.5,
+      pointRadius: 5,
+      pointBackgroundColor: '#1d4ed8',
+      fill: true,
+      tension: 0.3
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { display: false } },
+      y: { grid: { color: 'rgba(0,0,0,0.06)' },
+           ticks: { callback: v => '$' + v.toLocaleString() } }
+    }
+  }
+});
+
+// ── Transactions ───────────────────────────────────────────────────────────
+const TXN_DATA = [{"date":"2026-04-30","desc":"Online Transfer To Fairwinds ####1916","amount":-50.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-04"},{"date":"2026-04-30","desc":"Otr Capital Llc","amount":4356.12,"type":"credit","category":"Funding","txn_type":"ACH","flags":["fund"],"month":"2026-04"},{"date":"2026-04-29","desc":"Zelle To Rg","amount":-1000.0,"type":"debit","category":"General","txn_type":"RTP","flags":[],"month":"2026-04"},{"date":"2026-04-29","desc":"Square Inc","amount":-640.56,"type":"debit","category":"Funding","txn_type":"ACH","flags":["fund"],"month":"2026-04"},{"date":"2026-04-29","desc":"Zelle From Del Sur Ranch Corp","amount":1230.0,"type":"credit","category":"General","txn_type":"RTP","flags":["rev"],"month":"2026-04"},{"date":"2026-04-28","desc":"Online Transfer To Chk ...9282","amount":-300.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-04"},{"date":"2026-04-28","desc":"Zelle To Rg","amount":-1000.0,"type":"debit","category":"General","txn_type":"RTP","flags":[],"month":"2026-04"},{"date":"2026-04-27","desc":"Online Transfer To Mma ...9632","amount":-50.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-04"},{"date":"2026-04-27","desc":"Online Transfer To Flagship Checking 7632","amount":-3000.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-04"},{"date":"2026-04-27","desc":"Creditstrong-Auscabank 000-0000000 Tx","amount":-102.26,"type":"debit","category":"General","txn_type":"CARD","flags":[],"month":"2026-04"},{"date":"2026-04-27","desc":"Real-Time Transfer from Square","amount":4060.45,"type":"credit","category":"General","txn_type":"MERCHANT","flags":["rev"],"month":"2026-04"},{"date":"2026-04-24","desc":"Online Transfer To Flagship Checking 7632","amount":-3000.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-04"},{"date":"2026-04-24","desc":"American First F","amount":-117.07,"type":"debit","category":"General","txn_type":"ACH","flags":[],"month":"2026-04"},{"date":"2026-04-24","desc":"Paypal","amount":-1317.31,"type":"debit","category":"Funding","txn_type":"APP","flags":["fund"],"month":"2026-04"},{"date":"2026-04-23","desc":"Online Transfer To Chk ...9282","amount":-300.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-04"},{"date":"2026-04-23","desc":"Online Transfer To Fairwinds ####1916","amount":-50.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-04"},{"date":"2026-04-23","desc":"Capital One","amount":-1400.0,"type":"debit","category":"General","txn_type":"ACH","flags":[],"month":"2026-04"},{"date":"2026-04-23","desc":"Capital One","amount":-800.0,"type":"debit","category":"General","txn_type":"ACH","flags":[],"month":"2026-04"},{"date":"2026-04-23","desc":"Otr Capital Llc","amount":4060.45,"type":"credit","category":"Funding","txn_type":"ACH","flags":["fund"],"month":"2026-04"},{"date":"2026-04-22","desc":"Capital One","amount":-1400.0,"type":"debit","category":"General","txn_type":"ACH","flags":[],"month":"2026-04"},{"date":"2026-04-22","desc":"Real-Time Transfer from Square","amount":3892.93,"type":"credit","category":"General","txn_type":"MERCHANT","flags":["rev"],"month":"2026-04"},{"date":"2026-04-21","desc":"Online Transfer To Flagship Checking 7632","amount":-3000.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-04"},{"date":"2026-04-21","desc":"Online Transfer To Chk ...9282","amount":-300.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-04"},{"date":"2026-04-20","desc":"Online Transfer To Mma ...9632","amount":-50.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-04"},{"date":"2026-04-20","desc":"Zelle To Dc","amount":-1000.0,"type":"debit","category":"General","txn_type":"RTP","flags":[],"month":"2026-04"},{"date":"2026-04-20","desc":"Real-Time Transfer from Square","amount":4237.27,"type":"credit","category":"General","txn_type":"MERCHANT","flags":["rev"],"month":"2026-04"},{"date":"2026-04-18","desc":"Online Transfer To Flagship Checking 7632","amount":-3000.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-04"},{"date":"2026-04-18","desc":"Online Transfer To Chk ...9282","amount":-300.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-04"},{"date":"2026-04-18","desc":"Online Transfer To Mma ...9632","amount":-50.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-04"},{"date":"2026-04-17","desc":"Paypal","amount":-1317.31,"type":"debit","category":"Funding","txn_type":"APP","flags":["fund"],"month":"2026-04"},{"date":"2026-04-17","desc":"Real-Time Transfer from Square","amount":3500.0,"type":"credit","category":"General","txn_type":"MERCHANT","flags":["rev"],"month":"2026-04"},{"date":"2026-04-16","desc":"Online Transfer To Chk ...9282","amount":-300.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-04"},{"date":"2026-04-15","desc":"Online Transfer To Flagship Checking 7632","amount":-3000.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-04"},{"date":"2026-04-15","desc":"Online Transfer To Mma ...9632","amount":-50.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-04"},{"date":"2026-04-14","desc":"Otr Capital Llc","amount":4060.45,"type":"credit","category":"Funding","txn_type":"ACH","flags":["fund"],"month":"2026-04"},{"date":"2026-04-14","desc":"Real-Time Transfer from Square","amount":3604.27,"type":"credit","category":"General","txn_type":"MERCHANT","flags":["rev"],"month":"2026-04"},{"date":"2026-04-13","desc":"Online Transfer To Chk ...9282","amount":-300.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-04"},{"date":"2026-04-13","desc":"Online Transfer To Fairwinds ####1916","amount":-50.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-04"},{"date":"2026-04-13","desc":"Capital One","amount":-1400.0,"type":"debit","category":"General","txn_type":"ACH","flags":[],"month":"2026-04"},{"date":"2026-04-12","desc":"Online Transfer To Flagship Checking 7632","amount":-3000.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-04"},{"date":"2026-04-11","desc":"Online Transfer To Mma ...9632","amount":-50.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-04"},{"date":"2026-04-11","desc":"Zelle To Dc","amount":-200.0,"type":"debit","category":"General","txn_type":"RTP","flags":[],"month":"2026-04"},{"date":"2026-04-11","desc":"Real-Time Transfer from Square","amount":4399.27,"type":"credit","category":"General","txn_type":"MERCHANT","flags":["rev"],"month":"2026-04"},{"date":"2026-04-10","desc":"Paypal","amount":-1317.31,"type":"debit","category":"Funding","txn_type":"APP","flags":["fund"],"month":"2026-04"},{"date":"2026-04-10","desc":"Online Transfer To Chk ...9282","amount":-300.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-04"},{"date":"2026-04-09","desc":"Online Transfer To Flagship Checking 7632","amount":-3000.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-04"},{"date":"2026-04-09","desc":"Online Transfer To Fairwinds ####1916","amount":-50.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-04"},{"date":"2026-04-09","desc":"American First F","amount":-117.07,"type":"debit","category":"General","txn_type":"ACH","flags":[],"month":"2026-04"},{"date":"2026-04-09","desc":"Real-Time Transfer from Square","amount":3500.0,"type":"credit","category":"General","txn_type":"MERCHANT","flags":["rev"],"month":"2026-04"},{"date":"2026-04-08","desc":"Online Transfer To Mma ...9632","amount":-50.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-04"},{"date":"2026-04-08","desc":"Zelle To Dc","amount":-500.0,"type":"debit","category":"General","txn_type":"RTP","flags":[],"month":"2026-04"},{"date":"2026-04-07","desc":"Otr Capital Llc","amount":4060.45,"type":"credit","category":"Funding","txn_type":"ACH","flags":["fund"],"month":"2026-04"},{"date":"2026-04-07","desc":"Zelle From Del Sur Ranch Corp","amount":1230.0,"type":"credit","category":"General","txn_type":"RTP","flags":["rev"],"month":"2026-04"},{"date":"2026-04-07","desc":"Online Transfer To Chk ...9282","amount":-300.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-04"},{"date":"2026-04-07","desc":"Home Depot","amount":-79.0,"type":"debit","category":"General","txn_type":"ACH","flags":[],"month":"2026-04"},{"date":"2026-04-07","desc":"Zelle To Trailer Rental","amount":-700.0,"type":"debit","category":"General","txn_type":"RTP","flags":[],"month":"2026-04"},{"date":"2026-04-07","desc":"Real-Time Transfer from Square","amount":4560.35,"type":"credit","category":"General","txn_type":"MERCHANT","flags":["rev"],"month":"2026-04"},{"date":"2026-04-06","desc":"American Express","amount":-1800.0,"type":"debit","category":"General","txn_type":"ACH","flags":[],"month":"2026-04"},{"date":"2026-04-06","desc":"Chase Credit Crd","amount":-1000.0,"type":"debit","category":"General","txn_type":"ACH","flags":[],"month":"2026-04"},{"date":"2026-04-06","desc":"Online Transfer To Mma ...9632","amount":-50.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-04"},{"date":"2026-04-06","desc":"Online Transfer To Flagship Checking 7632","amount":-3000.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-04"},{"date":"2026-04-05","desc":"Online Transfer To Flagship Checking 7632","amount":-3000.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-04"},{"date":"2026-04-05","desc":"Capital One","amount":-1400.0,"type":"debit","category":"General","txn_type":"ACH","flags":[],"month":"2026-04"},{"date":"2026-04-05","desc":"Payment Received \u2013 Current Account Withdr New York Ny","amount":1000.0,"type":"credit","category":"General","txn_type":"APP","flags":["rev"],"month":"2026-04"},{"date":"2026-04-05","desc":"Payment Sent \u2013 Apple Cash Sent Mone 1Infiniteloop Ca","amount":-150.0,"type":"debit","category":"General","txn_type":"APP","flags":[],"month":"2026-04"},{"date":"2026-04-04","desc":"Online Transfer To Chk ...9282","amount":-300.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-04"},{"date":"2026-04-04","desc":"Online Transfer To Mma ...9632","amount":-50.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-04"},{"date":"2026-04-04","desc":"Zelle To Dc","amount":-500.0,"type":"debit","category":"General","txn_type":"RTP","flags":[],"month":"2026-04"},{"date":"2026-04-03","desc":"Online Transfer To Flagship Checking 7632","amount":-2000.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-04"},{"date":"2026-04-03","desc":"Capital One","amount":-1400.0,"type":"debit","category":"General","txn_type":"ACH","flags":[],"month":"2026-04"},{"date":"2026-04-03","desc":"Paypal","amount":-1317.31,"type":"debit","category":"Funding","txn_type":"APP","flags":["fund"],"month":"2026-04"},{"date":"2026-04-03","desc":"American First F","amount":-117.07,"type":"debit","category":"General","txn_type":"ACH","flags":[],"month":"2026-04"},{"date":"2026-04-03","desc":"Adp Payroll Fees","amount":-40.77,"type":"debit","category":"General","txn_type":"PAYROLL","flags":[],"month":"2026-04"},{"date":"2026-04-03","desc":"Real-Time Transfer from Square","amount":3039.55,"type":"credit","category":"General","txn_type":"MERCHANT","flags":["rev"],"month":"2026-04"},{"date":"2026-04-03","desc":"Payment Received \u2013 Chime San Francisco Ca","amount":1000.0,"type":"credit","category":"General","txn_type":"APP","flags":["rev"],"month":"2026-04"},{"date":"2026-04-02","desc":"Online Transfer To Adv Plus Banking 2459","amount":-2000.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-04"},{"date":"2026-04-02","desc":"Online Transfer To Fairwinds ####1916","amount":-50.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-04"},{"date":"2026-04-01","desc":"Online Transfer To Chk ...2536","amount":-1000.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-04"},{"date":"2026-04-01","desc":"Citi Autopay","amount":-200.0,"type":"debit","category":"General","txn_type":"ACH","flags":[],"month":"2026-04"},{"date":"2026-04-01","desc":"Payment Sent \u2013 Cash App*Astrid Tirado Oakland Ca","amount":-150.0,"type":"debit","category":"General","txn_type":"APP","flags":[],"month":"2026-04"},{"date":"2026-04-01","desc":"Otr Capital Llc","amount":2196.9,"type":"credit","category":"Funding","txn_type":"ACH","flags":["fund"],"month":"2026-04"},{"date":"2026-04-01","desc":"Zelle From Del Sur Ranch Corp","amount":1230.0,"type":"credit","category":"General","txn_type":"RTP","flags":["rev"],"month":"2026-04"},{"date":"2026-03-31","desc":"Online Transfer To Chk ...2536","amount":-300.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-03"},{"date":"2026-03-31","desc":"Online Transfer To Mma ...9632","amount":-50.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-03"},{"date":"2026-03-31","desc":"Real-Time Transfer from Square","amount":4764.96,"type":"credit","category":"General","txn_type":"MERCHANT","flags":["rev"],"month":"2026-03"},{"date":"2026-03-30","desc":"Online Transfer To Flagship Checking 7632","amount":-3000.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-03"},{"date":"2026-03-30","desc":"Online Transfer To Chk ...2536","amount":-300.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-03"},{"date":"2026-03-30","desc":"Capital One","amount":-1400.0,"type":"debit","category":"General","txn_type":"ACH","flags":[],"month":"2026-03"},{"date":"2026-03-30","desc":"Capital One","amount":-800.0,"type":"debit","category":"General","txn_type":"ACH","flags":[],"month":"2026-03"},{"date":"2026-03-28","desc":"Online Transfer To Mma ...9632","amount":-50.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-03"},{"date":"2026-03-28","desc":"Zelle To Dc","amount":-1000.0,"type":"debit","category":"General","txn_type":"RTP","flags":[],"month":"2026-03"},{"date":"2026-03-28","desc":"Real-Time Transfer from Square","amount":4568.55,"type":"credit","category":"General","txn_type":"MERCHANT","flags":["rev"],"month":"2026-03"},{"date":"2026-03-27","desc":"Online Transfer To Flagship Checking 7632","amount":-3000.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-03"},{"date":"2026-03-27","desc":"Online Transfer To Chk ...2536","amount":-300.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-03"},{"date":"2026-03-26","desc":"Paypal","amount":-1317.31,"type":"debit","category":"Funding","txn_type":"APP","flags":["fund"],"month":"2026-03"},{"date":"2026-03-26","desc":"American First F","amount":-117.07,"type":"debit","category":"General","txn_type":"ACH","flags":[],"month":"2026-03"},{"date":"2026-03-25","desc":"Online Transfer To Mma ...9632","amount":-50.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-03"},{"date":"2026-03-24","desc":"Online Transfer To Flagship Checking 7632","amount":-3000.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-03"},{"date":"2026-03-24","desc":"Online Transfer To Chk ...2536","amount":-300.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-03"},{"date":"2026-03-24","desc":"Capital One","amount":-1400.0,"type":"debit","category":"General","txn_type":"ACH","flags":[],"month":"2026-03"},{"date":"2026-03-23","desc":"Real-Time Transfer from Square","amount":5183.87,"type":"credit","category":"General","txn_type":"MERCHANT","flags":["rev"],"month":"2026-03"},{"date":"2026-03-22","desc":"Online Transfer To Mma ...9632","amount":-50.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-03"},{"date":"2026-03-21","desc":"Online Transfer To Flagship Checking 7632","amount":-3000.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-03"},{"date":"2026-03-21","desc":"Online Transfer To Chk ...2536","amount":-300.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-03"},{"date":"2026-03-21","desc":"Capital One","amount":-800.0,"type":"debit","category":"General","txn_type":"ACH","flags":[],"month":"2026-03"},{"date":"2026-03-20","desc":"Paypal","amount":-1317.31,"type":"debit","category":"Funding","txn_type":"APP","flags":["fund"],"month":"2026-03"},{"date":"2026-03-20","desc":"Zelle To Dc","amount":-1000.0,"type":"debit","category":"General","txn_type":"RTP","flags":[],"month":"2026-03"},{"date":"2026-03-20","desc":"Real-Time Transfer from Square","amount":4799.29,"type":"credit","category":"General","txn_type":"MERCHANT","flags":["rev"],"month":"2026-03"},{"date":"2026-03-19","desc":"Online Transfer To Mma ...9632","amount":-50.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-03"},{"date":"2026-03-18","desc":"Online Transfer To Flagship Checking 7632","amount":-3000.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-03"},{"date":"2026-03-18","desc":"Online Transfer To Chk ...2536","amount":-300.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-03"},{"date":"2026-03-18","desc":"Capital One","amount":-1400.0,"type":"debit","category":"General","txn_type":"ACH","flags":[],"month":"2026-03"},{"date":"2026-03-17","desc":"Otr Capital Llc","amount":4060.45,"type":"credit","category":"Funding","txn_type":"ACH","flags":["fund"],"month":"2026-03"},{"date":"2026-03-17","desc":"Zelle From Del Sur Ranch Corp","amount":1344.0,"type":"credit","category":"General","txn_type":"RTP","flags":["rev"],"month":"2026-03"},{"date":"2026-03-16","desc":"Real-Time Transfer from Square","amount":5099.95,"type":"credit","category":"General","txn_type":"MERCHANT","flags":["rev"],"month":"2026-03"},{"date":"2026-03-15","desc":"Online Transfer To Mma ...9632","amount":-50.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-03"},{"date":"2026-03-14","desc":"Online Transfer To Flagship Checking 7632","amount":-3000.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-03"},{"date":"2026-03-14","desc":"Online Transfer To Chk ...2536","amount":-300.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-03"},{"date":"2026-03-14","desc":"Capital One","amount":-800.0,"type":"debit","category":"General","txn_type":"ACH","flags":[],"month":"2026-03"},{"date":"2026-03-13","desc":"Paypal","amount":-1317.31,"type":"debit","category":"Funding","txn_type":"APP","flags":["fund"],"month":"2026-03"},{"date":"2026-03-13","desc":"American First F","amount":-117.07,"type":"debit","category":"General","txn_type":"ACH","flags":[],"month":"2026-03"},{"date":"2026-03-13","desc":"Zelle To Dc","amount":-1000.0,"type":"debit","category":"General","txn_type":"RTP","flags":[],"month":"2026-03"},{"date":"2026-03-13","desc":"Real-Time Transfer from Square","amount":5004.46,"type":"credit","category":"General","txn_type":"MERCHANT","flags":["rev"],"month":"2026-03"},{"date":"2026-03-12","desc":"Online Transfer To Mma ...9632","amount":-50.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-03"},{"date":"2026-03-11","desc":"Online Transfer To Flagship Checking 7632","amount":-3000.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-03"},{"date":"2026-03-11","desc":"Online Transfer To Chk ...2536","amount":-300.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-03"},{"date":"2026-03-11","desc":"Capital One","amount":-1400.0,"type":"debit","category":"General","txn_type":"ACH","flags":[],"month":"2026-03"},{"date":"2026-03-10","desc":"Otr Capital Llc","amount":4060.45,"type":"credit","category":"Funding","txn_type":"ACH","flags":["fund"],"month":"2026-03"},{"date":"2026-03-10","desc":"Real-Time Transfer from Square","amount":4993.98,"type":"credit","category":"General","txn_type":"MERCHANT","flags":["rev"],"month":"2026-03"},{"date":"2026-03-09","desc":"Online Transfer To Mma ...9632","amount":-50.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-03"},{"date":"2026-03-08","desc":"Online Transfer To Flagship Checking 7632","amount":-3000.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-03"},{"date":"2026-03-08","desc":"Online Transfer To Chk ...2536","amount":-300.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-03"},{"date":"2026-03-08","desc":"Capital One","amount":-800.0,"type":"debit","category":"General","txn_type":"ACH","flags":[],"month":"2026-03"},{"date":"2026-03-07","desc":"Paypal","amount":-1317.31,"type":"debit","category":"Funding","txn_type":"APP","flags":["fund"],"month":"2026-03"},{"date":"2026-03-07","desc":"American First F","amount":-117.07,"type":"debit","category":"General","txn_type":"ACH","flags":[],"month":"2026-03"},{"date":"2026-03-07","desc":"Zelle To Dc","amount":-1000.0,"type":"debit","category":"General","txn_type":"RTP","flags":[],"month":"2026-03"},{"date":"2026-03-07","desc":"Real-Time Transfer from Square","amount":5094.36,"type":"credit","category":"General","txn_type":"MERCHANT","flags":["rev"],"month":"2026-03"},{"date":"2026-03-06","desc":"Online Transfer To Mma ...9632","amount":-50.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-03"},{"date":"2026-03-05","desc":"Online Transfer To Flagship Checking 7632","amount":-3000.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-03"},{"date":"2026-03-05","desc":"Online Transfer To Chk ...2536","amount":-300.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-03"},{"date":"2026-03-05","desc":"Capital One","amount":-1400.0,"type":"debit","category":"General","txn_type":"ACH","flags":[],"month":"2026-03"},{"date":"2026-03-04","desc":"Otr Capital Llc","amount":2642.21,"type":"credit","category":"Funding","txn_type":"ACH","flags":["fund"],"month":"2026-03"},{"date":"2026-03-04","desc":"Zelle From Del Sur Ranch Corp","amount":1340.0,"type":"credit","category":"General","txn_type":"RTP","flags":["rev"],"month":"2026-03"},{"date":"2026-03-03","desc":"Real-Time Transfer from Square","amount":5183.87,"type":"credit","category":"General","txn_type":"MERCHANT","flags":["rev"],"month":"2026-03"},{"date":"2026-03-02","desc":"Zelle From Tompkins Transport Llc","amount":1897.22,"type":"credit","category":"General","txn_type":"RTP","flags":["rev"],"month":"2026-03"},{"date":"2026-03-02","desc":"Online Transfer To Mma ...9632","amount":-50.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-03"},{"date":"2026-03-01","desc":"Online Transfer To Flagship Checking 7632","amount":-3000.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-03"},{"date":"2026-03-01","desc":"Online Transfer To Chk ...2536","amount":-300.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-03"},{"date":"2026-03-01","desc":"Capital One","amount":-800.0,"type":"debit","category":"General","txn_type":"ACH","flags":[],"month":"2026-03"},{"date":"2026-02-28","desc":"Online Transfer To Mma ...9632","amount":-50.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-02"},{"date":"2026-02-28","desc":"Real-Time Transfer from Square","amount":4825.16,"type":"credit","category":"General","txn_type":"MERCHANT","flags":["rev"],"month":"2026-02"},{"date":"2026-02-27","desc":"Otr Capital Llc","amount":868.0,"type":"credit","category":"Funding","txn_type":"ACH","flags":["fund"],"month":"2026-02"},{"date":"2026-02-27","desc":"Paypal","amount":-1317.31,"type":"debit","category":"Funding","txn_type":"APP","flags":["fund"],"month":"2026-02"},{"date":"2026-02-27","desc":"American First F","amount":-117.07,"type":"debit","category":"General","txn_type":"ACH","flags":[],"month":"2026-02"},{"date":"2026-02-26","desc":"Online Transfer To Flagship Checking 7632","amount":-3000.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-02"},{"date":"2026-02-26","desc":"Online Transfer To Chk ...2536","amount":-300.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-02"},{"date":"2026-02-26","desc":"Capital One","amount":-1400.0,"type":"debit","category":"General","txn_type":"ACH","flags":[],"month":"2026-02"},{"date":"2026-02-25","desc":"Real-Time Transfer from Square","amount":5055.15,"type":"credit","category":"General","txn_type":"MERCHANT","flags":["rev"],"month":"2026-02"},{"date":"2026-02-24","desc":"Online Transfer To Mma ...9632","amount":-50.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-02"},{"date":"2026-02-23","desc":"Online Transfer To Flagship Checking 7632","amount":-3000.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-02"},{"date":"2026-02-23","desc":"Online Transfer To Chk ...2536","amount":-300.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-02"},{"date":"2026-02-23","desc":"Capital One","amount":-800.0,"type":"debit","category":"General","txn_type":"ACH","flags":[],"month":"2026-02"},{"date":"2026-02-21","desc":"Real-Time Transfer from Square","amount":4957.34,"type":"credit","category":"General","txn_type":"MERCHANT","flags":["rev"],"month":"2026-02"},{"date":"2026-02-20","desc":"Paypal","amount":-1317.31,"type":"debit","category":"Funding","txn_type":"APP","flags":["fund"],"month":"2026-02"},{"date":"2026-02-20","desc":"Online Transfer To Mma ...9632","amount":-50.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-02"},{"date":"2026-02-19","desc":"Online Transfer To Flagship Checking 7632","amount":-3000.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-02"},{"date":"2026-02-19","desc":"Online Transfer To Chk ...2536","amount":-300.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-02"},{"date":"2026-02-19","desc":"Capital One","amount":-1400.0,"type":"debit","category":"General","txn_type":"ACH","flags":[],"month":"2026-02"},{"date":"2026-02-18","desc":"Real-Time Transfer from Square","amount":4825.16,"type":"credit","category":"General","txn_type":"MERCHANT","flags":["rev"],"month":"2026-02"},{"date":"2026-02-17","desc":"Online Transfer To Mma ...9632","amount":-50.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-02"},{"date":"2026-02-16","desc":"Online Transfer To Flagship Checking 7632","amount":-3000.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-02"},{"date":"2026-02-16","desc":"Online Transfer To Chk ...2536","amount":-300.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-02"},{"date":"2026-02-16","desc":"Capital One","amount":-800.0,"type":"debit","category":"General","txn_type":"ACH","flags":[],"month":"2026-02"},{"date":"2026-02-14","desc":"Real-Time Transfer from Square","amount":5033.26,"type":"credit","category":"General","txn_type":"MERCHANT","flags":["rev"],"month":"2026-02"},{"date":"2026-02-13","desc":"Paypal","amount":-1317.31,"type":"debit","category":"Funding","txn_type":"APP","flags":["fund"],"month":"2026-02"},{"date":"2026-02-13","desc":"American First F","amount":-117.07,"type":"debit","category":"General","txn_type":"ACH","flags":[],"month":"2026-02"},{"date":"2026-02-13","desc":"Online Transfer To Mma ...9632","amount":-50.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-02"},{"date":"2026-02-12","desc":"Online Transfer To Flagship Checking 7632","amount":-3000.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-02"},{"date":"2026-02-12","desc":"Online Transfer To Chk ...2536","amount":-300.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-02"},{"date":"2026-02-12","desc":"Capital One","amount":-1400.0,"type":"debit","category":"General","txn_type":"ACH","flags":[],"month":"2026-02"},{"date":"2026-02-12","desc":"Otr Capital Llc","amount":3500.0,"type":"credit","category":"Funding","txn_type":"ACH","flags":["fund"],"month":"2026-02"},{"date":"2026-02-12","desc":"Real-Time Transfer from Square","amount":4745.27,"type":"credit","category":"General","txn_type":"MERCHANT","flags":["rev"],"month":"2026-02"},{"date":"2026-02-11","desc":"Online Transfer To Mma ...9632","amount":-50.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-02"},{"date":"2026-02-10","desc":"Online Transfer To Flagship Checking 7632","amount":-3000.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-02"},{"date":"2026-02-10","desc":"Online Transfer To Chk ...2536","amount":-300.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-02"},{"date":"2026-02-10","desc":"Capital One","amount":-800.0,"type":"debit","category":"General","txn_type":"ACH","flags":[],"month":"2026-02"},{"date":"2026-02-09","desc":"Square Inc","amount":-300.0,"type":"debit","category":"Funding","txn_type":"ACH","flags":["fund"],"month":"2026-02"},{"date":"2026-02-09","desc":"Real-Time Transfer from Square","amount":4882.49,"type":"credit","category":"General","txn_type":"MERCHANT","flags":["rev"],"month":"2026-02"},{"date":"2026-02-08","desc":"Online Transfer To Mma ...9632","amount":-50.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-02"},{"date":"2026-02-07","desc":"Online Transfer To Flagship Checking 7632","amount":-3000.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-02"},{"date":"2026-02-07","desc":"Online Transfer To Chk ...2536","amount":-300.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-02"},{"date":"2026-02-07","desc":"Capital One","amount":-1400.0,"type":"debit","category":"General","txn_type":"ACH","flags":[],"month":"2026-02"},{"date":"2026-02-07","desc":"Real-Time Transfer from Square","amount":4941.83,"type":"credit","category":"General","txn_type":"MERCHANT","flags":["rev"],"month":"2026-02"},{"date":"2026-02-06","desc":"Paypal","amount":-1317.31,"type":"debit","category":"Funding","txn_type":"APP","flags":["fund"],"month":"2026-02"},{"date":"2026-02-06","desc":"American First F","amount":-117.07,"type":"debit","category":"General","txn_type":"ACH","flags":[],"month":"2026-02"},{"date":"2026-02-06","desc":"Online Transfer To Mma ...9632","amount":-50.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-02"},{"date":"2026-02-05","desc":"Online Transfer To Flagship Checking 7632","amount":-3000.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-02"},{"date":"2026-02-05","desc":"Online Transfer To Chk ...2536","amount":-300.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-02"},{"date":"2026-02-05","desc":"Square Inc","amount":-300.0,"type":"debit","category":"Funding","txn_type":"ACH","flags":["fund"],"month":"2026-02"},{"date":"2026-02-05","desc":"Capital One","amount":-800.0,"type":"debit","category":"General","txn_type":"ACH","flags":[],"month":"2026-02"},{"date":"2026-02-04","desc":"Otr Capital Llc","amount":3500.0,"type":"credit","category":"Funding","txn_type":"ACH","flags":["fund"],"month":"2026-02"},{"date":"2026-02-04","desc":"Real-Time Transfer from Square","amount":5033.26,"type":"credit","category":"General","txn_type":"MERCHANT","flags":["rev"],"month":"2026-02"},{"date":"2026-02-03","desc":"Online Transfer To Mma ...9632","amount":-50.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-02"},{"date":"2026-02-02","desc":"Online Transfer To Flagship Checking 7632","amount":-3000.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-02"},{"date":"2026-02-02","desc":"Online Transfer To Chk ...2536","amount":-300.0,"type":"debit","category":"Transfer","txn_type":"TRANSFER","flags":["xfer"],"month":"2026-02"},{"date":"2026-02-02","desc":"Capital One","amount":-1400.0,"type":"debit","category":"General","txn_type":"ACH","flags":[],"month":"2026-02"},{"date":"2026-02-02","desc":"Zelle From Del Sur Ranch Corp","amount":1371.0,"type":"credit","category":"General","txn_type":"RTP","flags":["rev"],"month":"2026-02"},{"date":"2026-02-01","desc":"Real-Time Transfer from Square","amount":4825.16,"type":"credit","category":"General","txn_type":"MERCHANT","flags":["rev"],"month":"2026-02"}];
+
+const PAGE_SIZE = 50;
+let currentPage = 1;
+let activeFilter = 'all';
+let searchTerm = '';
+let filtered = TXN_DATA;
+let txnsRendered = false;
+
+function applyFilters() {
+  filtered = TXN_DATA.filter(t => {
+    const matchFilter =
+      activeFilter === 'all' ? true :
+      activeFilter === 'rev' ? t.flags.includes('rev') :
+      activeFilter === 'fund' ? t.flags.includes('fund') :
+      activeFilter === 'xfer' ? t.flags.includes('xfer') :
+      activeFilter === 'credit' ? t.type === 'credit' :
+      activeFilter === 'debit' ? t.type === 'debit' : true;
+    const matchSearch = !searchTerm || t.desc.toLowerCase().includes(searchTerm);
+    return matchFilter && matchSearch;
+  });
+  currentPage = 1;
+}
+
+function renderTxns() {
+  txnsRendered = true;
+  applyFilters();
+  renderPage();
+}
+
+function renderPage() {
+  const tbody = document.getElementById('txn-tbody');
+  const start = (currentPage - 1) * PAGE_SIZE;
+  const slice = filtered.slice(start, start + PAGE_SIZE);
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+
+  tbody.innerHTML = slice.map(t => {
+    const amtClass = t.type === 'credit' ? 'num-pos' : 'num-neg';
+    const amtSign = t.type === 'credit' ? '+' : '−';
+    const amtStr = amtSign + '$' + Math.abs(t.amount).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+    const flagsHtml = t.flags.map(f =>
+      f === 'rev' ? '<span class="badge badge-rev">Revenue</span>' :
+      f === 'fund' ? '<span class="badge badge-fund">Funding</span>' :
+      f === 'xfer' ? '<span class="badge badge-xfer">Transfer</span>' : ''
+    ).join(' ') || (t.type === 'credit' ? '<span class="badge badge-credit">Credit</span>' : '<span class="badge badge-debit">Debit</span>');
+    return `<tr>
+      <td>${t.date}</td>
+      <td class="desc-cell">${t.desc}</td>
+      <td>${t.category}</td>
+      <td style="font-size:11px;color:var(--gray-500)">${t.txn_type}</td>
+      <td><div class="flags-cell">${flagsHtml}</div></td>
+      <td class="r ${amtClass}">${amtStr}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('txn-count').textContent = `${filtered.length} transactions`;
+  document.getElementById('page-info').textContent = `Page ${currentPage} of ${totalPages} (${filtered.length} results)`;
+  document.getElementById('btn-prev').disabled = currentPage === 1;
+  document.getElementById('btn-next').disabled = currentPage >= totalPages;
+}
+
+function filterTxns() {
+  searchTerm = document.getElementById('txn-search').value.toLowerCase();
+  applyFilters();
+  renderPage();
+}
+
+function setFilter(btn, filter) {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  activeFilter = filter;
+  applyFilters();
+  renderPage();
+}
+
+function changePage(dir) {
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  currentPage = Math.max(1, Math.min(totalPages, currentPage + dir));
+  renderPage();
+  document.querySelector('#tab-transactions').scrollIntoView({behavior:'smooth'});
+}
+</script>
+</body>
+</html>
