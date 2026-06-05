@@ -1,0 +1,56 @@
+name: Get Constant Contact Token
+
+on:
+  workflow_dispatch:
+    inputs:
+      code:
+        description: 'Paste the code= value from the Constant Contact redirect URL'
+        required: true
+
+jobs:
+  exchange-token:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Exchange auth code for tokens
+        run: |
+          node - <<'EOF'
+          const https = require('https');
+
+          const CLIENT_ID = '954c38a8-4d7f-4af9-8721-f906d7006110';
+          const CLIENT_SECRET = 'pfShqjqKH_gUWefqEIUtmg';
+          const REDIRECT_URI = 'https://localhost';
+          const code = '${{ github.event.inputs.code }}';
+
+          const credentials = Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString('base64');
+          const body = `grant_type=authorization_code&code=${encodeURIComponent(code)}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}`;
+
+          const req = https.request({
+            hostname: 'authz.constantcontact.com',
+            path: '/oauth2/default/v1/token',
+            method: 'POST',
+            headers: {
+              'Authorization': `Basic ${credentials}`,
+              'Content-Type': 'application/x-www-form-urlencoded',
+              'Content-Length': Buffer.byteLength(body),
+            },
+          }, res => {
+            let data = '';
+            res.on('data', chunk => data += chunk);
+            res.on('end', () => {
+              const json = JSON.parse(data);
+              if (json.error) {
+                console.error('Error:', json.error_description || json.error);
+                process.exit(1);
+              }
+              console.log('\n========== COPY THESE VALUES ==========');
+              console.log(`CC_ACCESS_TOKEN=${json.access_token}`);
+              console.log(`CC_REFRESH_TOKEN=${json.refresh_token}`);
+              console.log(`Expires in: ${json.expires_in} seconds (${Math.round(json.expires_in/3600)} hours)`);
+              console.log('========================================\n');
+            });
+          });
+
+          req.on('error', err => { console.error(err.message); process.exit(1); });
+          req.write(body);
+          req.end();
+          EOF
