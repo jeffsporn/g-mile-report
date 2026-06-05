@@ -1,0 +1,20 @@
+{
+  "name": "g-mile-report-integrations",
+  "version": "1.0.0",
+  "description": "Slack bot that pulls leads from Salesforce and syncs them to Constant Contact",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "dependencies": {
+    "@slack/bolt": "^3.21.1",
+    "axios": "^1.7.2",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "jsforce": "^1.11.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.4"
+  }
+}
