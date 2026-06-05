@@ -1,0 +1,63 @@
+name: Test Constant Contact Connection
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-connection:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch CC account info and contact lists
+        env:
+          CC_ACCESS_TOKEN: ${{ secrets.CC_ACCESS_TOKEN }}
+        run: |
+          node - <<'EOF'
+          const https = require('https');
+
+          function get(path) {
+            return new Promise((resolve, reject) => {
+              const req = https.request({
+                hostname: 'api.cc.email',
+                path: `/v3${path}`,
+                method: 'GET',
+                headers: {
+                  'Authorization': `Bearer ${process.env.CC_ACCESS_TOKEN}`,
+                  'Content-Type': 'application/json',
+                },
+              }, res => {
+                let data = '';
+                res.on('data', chunk => data += chunk);
+                res.on('end', () => resolve({ status: res.statusCode, body: JSON.parse(data) }));
+              });
+              req.on('error', reject);
+              req.end();
+            });
+          }
+
+          async function main() {
+            console.log('--- Account Summary ---');
+            const account = await get('/account/summary');
+            if (account.status !== 200) {
+              console.error('Auth failed:', JSON.stringify(account.body));
+              process.exit(1);
+            }
+            const a = account.body;
+            console.log(`Name:    ${a.first_name} ${a.last_name}`);
+            console.log(`Email:   ${a.email}`);
+            console.log(`Company: ${a.company_name}`);
+            console.log(`Country: ${a.country_code}`);
+
+            console.log('\n--- Contact Lists ---');
+            const lists = await get('/contact_lists?limit=25&include_count=true');
+            const items = lists.body.lists || [];
+            if (items.length === 0) {
+              console.log('No contact lists found.');
+            } else {
+              items.forEach(l => console.log(`  [${l.list_id}] ${l.name} — ${l.membership_count ?? 0} contacts`));
+            }
+
+            console.log('\nConnection successful!');
+          }
+
+          main().catch(err => { console.error(err); process.exit(1); });
+          EOF
