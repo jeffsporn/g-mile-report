@@ -14,23 +14,24 @@ jobs:
           node - <<'EOF'
           const https = require('https');
 
-          // Strip anything that isn't a valid JWT character (letters, digits, - _ .)
-          // This handles cases where the label, newlines, or spaces were pasted with the token
+          // Extract the JWT regardless of how the secret was pasted.
+          // Handles: bare token, "CC_ACCESS_TOKEN=eyJ...", or full file contents.
           const raw = (process.env.CC_ACCESS_TOKEN || '');
-          const token = raw.replace(/[^A-Za-z0-9\-_.]/g, '');
+          const match = raw.match(/eyJ[A-Za-z0-9\-_.]+/);
+          const token = match ? match[0] : '';
 
-          if (!token.startsWith('eyJ')) {
-            console.error('Secret does not look like a valid JWT. Raw length:', raw.length);
+          if (!token) {
+            console.error('Could not find a JWT in the secret. Raw length:', raw.length);
             process.exit(1);
           }
 
-          console.log('Token length:', token.length, '(looks valid)');
+          console.log('Token extracted, length:', token.length);
 
           function get(path) {
             return new Promise((resolve, reject) => {
               const req = https.request({
                 hostname: 'api.cc.email',
-                path: `/v3${path}`,
+                path: '/v3' + path,
                 method: 'GET',
                 headers: {
                   'Authorization': 'Bearer ' + token,
@@ -50,7 +51,7 @@ jobs:
             console.log('\n--- Account Summary ---');
             const account = await get('/account/summary');
             if (account.status !== 200) {
-              console.error('Auth failed:', JSON.stringify(account.body));
+              console.error('Auth failed (' + account.status + '):', JSON.stringify(account.body));
               process.exit(1);
             }
             const a = account.body;
