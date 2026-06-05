@@ -7,25 +7,21 @@ jobs:
   test-connection:
     runs-on: ubuntu-latest
     steps:
-      - name: Fetch CC account info and contact lists
+      - name: Fetch CC contact lists
         env:
           CC_ACCESS_TOKEN: ${{ secrets.CC_ACCESS_TOKEN }}
         run: |
           node - <<'EOF'
           const https = require('https');
 
-          // Extract the JWT regardless of how the secret was pasted.
-          // Handles: bare token, "CC_ACCESS_TOKEN=eyJ...", or full file contents.
           const raw = (process.env.CC_ACCESS_TOKEN || '');
           const match = raw.match(/eyJ[A-Za-z0-9\-_.]+/);
           const token = match ? match[0] : '';
 
           if (!token) {
-            console.error('Could not find a JWT in the secret. Raw length:', raw.length);
+            console.error('No JWT found in secret.');
             process.exit(1);
           }
-
-          console.log('Token extracted, length:', token.length);
 
           function get(path) {
             return new Promise((resolve, reject) => {
@@ -48,27 +44,22 @@ jobs:
           }
 
           async function main() {
-            console.log('\n--- Account Summary ---');
-            const account = await get('/account/summary');
-            if (account.status !== 200) {
-              console.error('Auth failed (' + account.status + '):', JSON.stringify(account.body));
+            console.log('Testing Constant Contact API connection...');
+
+            const r = await get('/contact_lists?limit=25&include_count=true');
+            if (r.status !== 200) {
+              console.error('Failed (' + r.status + '):', JSON.stringify(r.body));
               process.exit(1);
             }
-            const a = account.body;
-            console.log('Name:    ' + a.first_name + ' ' + a.last_name);
-            console.log('Email:   ' + a.email);
-            console.log('Company: ' + a.company_name);
 
-            console.log('\n--- Contact Lists ---');
-            const lists = await get('/contact_lists?limit=25&include_count=true');
-            const items = lists.body.lists || [];
-            if (items.length === 0) {
-              console.log('No contact lists found.');
-            } else {
-              items.forEach(l => console.log('  [' + l.list_id + '] ' + l.name + ' - ' + (l.membership_count || 0) + ' contacts'));
-            }
-
+            const lists = r.body.lists || [];
             console.log('\nConnection successful!');
+            console.log('Contact lists found: ' + lists.length);
+            if (lists.length === 0) {
+              console.log('(No lists yet - that is fine)');
+            } else {
+              lists.forEach(l => console.log('  [' + l.list_id + '] ' + l.name + ' - ' + (l.membership_count || 0) + ' contacts'));
+            }
           }
 
           main().catch(err => { console.error(err.message); process.exit(1); });
