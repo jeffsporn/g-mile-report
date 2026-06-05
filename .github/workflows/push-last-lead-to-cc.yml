@@ -1,0 +1,121 @@
+name: Push Last Salesforce Lead to Constant Contact
+
+on:
+  workflow_dispatch:
+    inputs:
+      list_id:
+        description: 'Constant Contact list ID to add the contact to (leave blank for default)'
+        required: false
+        default: ''
+
+jobs:
+  push-lead:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install jsforce
+        run: npm install jsforce
+
+      - name: Fetch last lead from Salesforce and push to Constant Contact
+        env:
+          SF_USERNAME: ${{ secrets.SF_USERNAME }}
+          SF_PASSWORD: ${{ secrets.SF_PASSWORD }}
+          SF_SECURITY_TOKEN: ${{ secrets.SF_SECURITY_TOKEN }}
+          SF_LOGIN_URL: ${{ secrets.SF_LOGIN_URL }}
+          CC_ACCESS_TOKEN: ${{ secrets.CC_ACCESS_TOKEN }}
+          CC_DEFAULT_LIST_ID: ${{ secrets.CC_DEFAULT_LIST_ID }}
+          LIST_ID_INPUT: ${{ github.event.inputs.list_id }}
+        run: |
+          node - <<'EOF'
+          const jsforce = require('./node_modules/jsforce');
+          const https = require('https');
+
+          // Extract JWT from secret however it was pasted
+          const rawToken = (process.env.CC_ACCESS_TOKEN || '');
+          const match = rawToken.match(/eyJ[A-Za-z0-9\-_.]+/);
+          const ccToken = match ? match[0] : '';
+          if (!ccToken) { console.error('No CC token found'); process.exit(1); }
+
+          const listId = (process.env.LIST_ID_INPUT || process.env.CC_DEFAULT_LIST_ID || '').trim();
+
+          async function getLastLead() {
+            const conn = new jsforce.Connection({
+              loginUrl: process.env.SF_LOGIN_URL || 'https://login.salesforce.com'
+            });
+            await conn.login(
+              process.env.SF_USERNAME,
+              process.env.SF_PASSWORD + (process.env.SF_SECURITY_TOKEN || '')
+            );
+            console.log('Connected to Salesforce');
+
+            const result = await conn.query(
+              `SELECT Id, FirstName, LastName, Email, Company, Phone, LeadSource, Status, CreatedDate
+               FROM Lead
+               WHERE Email != null
+               ORDER BY CreatedDate DESC
+               LIMIT 1`
+            );
+
+            if (result.records.length === 0) {
+              console.error('No leads with email found in Salesforce.');
+              process.exit(1);
+            }
+            return result.records[0];
+          }
+
+          function ccRequest(method, path, body) {
+            return new Promise((resolve, reject) => {
+              const payload = body ? JSON.stringify(body) : null;
+              const req = https.request({
+                hostname: 'api.cc.email',
+                path: '/v3' + path,
+                method,
+                headers: {
+                  'Authorization': 'Bearer ' + ccToken,
+                  'Content-Type': 'application/json',
+                  ...(payload ? { 'Content-Length': Buffer.byteLength(payload) } : {})
+                },
+              }, res => {
+                let data = '';
+                res.on('data', c => data += c);
+                res.on('end', () => resolve({ status: res.statusCode, body: data ? JSON.parse(data) : {} }));
+              });
+              req.on('error', reject);
+              if (payload) req.write(payload);
+              req.end();
+            });
+          }
+
+          async function main() {
+            const lead = await getLastLead();
+            console.log('\nLast Salesforce lead:');
+            console.log('  Name:    ' + (lead.FirstName || '') + ' ' + (lead.LastName || ''));
+            console.log('  Email:   ' + lead.Email);
+            console.log('  Company: ' + (lead.Company || 'N/A'));
+            console.log('  Phone:   ' + (lead.Phone || 'N/A'));
+            console.log('  Source:  ' + (lead.LeadSource || 'N/A'));
+            console.log('  Created: ' + lead.CreatedDate);
+
+            const payload = {
+              email_address: { address: lead.Email, permission_to_send: 'implicit' },
+              first_name: lead.FirstName || '',
+              last_name: lead.LastName || '',
+              company_name: lead.Company || '',
+              phone_numbers: lead.Phone ? [{ phone_number: lead.Phone, kind: 'work' }] : [],
+              ...(listId ? { list_memberships: [listId] } : {}),
+            };
+
+            console.log('\nPushing to Constant Contact...');
+            const r = await ccRequest('PUT', '/contacts/sign_up_form', payload);
+
+            if (r.status === 200 || r.status === 201) {
+              console.log('\nSuccess! Contact created/updated in Constant Contact.');
+              console.log('  Contact ID: ' + (r.body.contact_id || 'N/A'));
+              if (listId) console.log('  Added to list: ' + listId);
+            } else {
+              console.error('CC API error (' + r.status + '):', JSON.stringify(r.body));
+              process.exit(1);
+            }
+          }
+
+          main().catch(err => { console.error(err.message); process.exit(1); });
+          EOF
