@@ -15,6 +15,7 @@ jobs:
         run: |
           node - <<'EOF'
           const https = require('https');
+          const fs = require('fs');
 
           const CLIENT_ID = '954c38a8-4d7f-4af9-8721-f906d7006110';
           const CLIENT_SECRET = 'pfShqjqKH_gUWefqEIUtmg';
@@ -42,11 +43,14 @@ jobs:
                 console.error('Error:', json.error_description || json.error);
                 process.exit(1);
               }
-              console.log('\n========== COPY THESE VALUES ==========');
-              console.log(`CC_ACCESS_TOKEN=${json.access_token}`);
-              console.log(`CC_REFRESH_TOKEN=${json.refresh_token}`);
-              console.log(`Expires in: ${json.expires_in} seconds (${Math.round(json.expires_in/3600)} hours)`);
-              console.log('========================================\n');
+              // Write to file so GitHub does not mask the value
+              const content = [
+                `CC_ACCESS_TOKEN=${json.access_token}`,
+                `CC_REFRESH_TOKEN=${json.refresh_token || 'none'}`,
+                `Expires in: ${json.expires_in} seconds (${Math.round(json.expires_in/3600)} hours)`,
+              ].join('\n');
+              fs.writeFileSync('cc-tokens.txt', content);
+              console.log('Token written to cc-tokens.txt artifact — download it from the Actions run page.');
             });
           });
 
@@ -54,3 +58,10 @@ jobs:
           req.write(body);
           req.end();
           EOF
+
+      - name: Upload token file
+        uses: actions/upload-artifact@v4
+        with:
+          name: cc-tokens
+          path: cc-tokens.txt
+          retention-days: 1
