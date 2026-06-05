@@ -24,10 +24,7 @@ async function upsertContact(lead, listIds = []) {
       : [];
 
   const payload = {
-    email_address: {
-      address: lead.Email,
-      permission_to_send: 'implicit',
-    },
+    email_address: lead.Email,
     first_name: lead.FirstName || '',
     last_name: lead.LastName || '',
     company_name: lead.Company || '',
@@ -35,16 +32,12 @@ async function upsertContact(lead, listIds = []) {
       ? [{ phone_number: lead.Phone, kind: 'work' }]
       : [],
     list_memberships: targetLists,
-    custom_fields: [
-      { custom_field_id: 'lead_source', value: lead.LeadSource || '' },
-      { custom_field_id: 'sf_lead_id', value: lead.Id || '' },
-    ].filter(f => f.value),
   };
 
   const http = client();
 
-  // PUT /contacts/sign_up_form upserts by email
-  const response = await http.put('/contacts/sign_up_form', payload);
+  // POST /contacts/sign_up_form upserts by email
+  const response = await http.post('/contacts/sign_up_form', payload);
   return response.data;
 }
 
