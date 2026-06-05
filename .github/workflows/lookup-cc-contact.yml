@@ -1,0 +1,89 @@
+name: Lookup Constant Contact Contact
+
+on:
+  workflow_dispatch:
+    inputs:
+      email:
+        description: 'Email address to look up'
+        required: true
+
+jobs:
+  lookup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Lookup contact by email
+        run: |
+          node - <<'EOF'
+          const https = require('https');
+
+          const raw = (process.env.CC_ACCESS_TOKEN || '');
+          const match = raw.match(/eyJ[A-Za-z0-9\-_.]+/);
+          const token = match ? match[0] : '';
+
+          if (!token) {
+            console.error('ERROR: CC_ACCESS_TOKEN secret is missing or invalid.');
+            process.exit(1);
+          }
+
+          const email = '${{ github.event.inputs.email }}';
+          const path = `/v3/contacts?email=${encodeURIComponent(email)}&include=list_memberships,custom_fields,phone_numbers,street_addresses,notes,taggings`;
+
+          const req = https.request({
+            hostname: 'api.cc.email',
+            path,
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          }, res => {
+            let data = '';
+            res.on('data', chunk => data += chunk);
+            res.on('end', () => {
+              if (res.statusCode !== 200) {
+                console.error(`Error ${res.statusCode}:`, data);
+                process.exit(1);
+              }
+              const json = JSON.parse(data);
+              const contacts = json.contacts || [];
+              if (contacts.length === 0) {
+                console.log(`No contact found for: ${email}`);
+                return;
+              }
+              const c = contacts[0];
+              console.log('\n========== CONTACT INFO ==========');
+              console.log(`Contact ID:    ${c.contact_id}`);
+              console.log(`Name:          ${c.first_name || ''} ${c.last_name || ''}`);
+              console.log(`Email:         ${email}`);
+              console.log(`Email Status:  ${c.email_address?.permission_to_send || 'N/A'}`);
+              console.log(`Company:       ${c.company_name || 'N/A'}`);
+              console.log(`Job Title:     ${c.job_title || 'N/A'}`);
+              if (c.phone_numbers?.length) {
+                c.phone_numbers.forEach(p => console.log(`Phone (${p.kind}): ${p.phone_number}`));
+              }
+              if (c.street_addresses?.length) {
+                const a = c.street_addresses[0];
+                console.log(`Address:       ${[a.street, a.city, a.state, a.postal_code, a.country].filter(Boolean).join(', ')}`);
+              }
+              console.log(`Created:       ${c.created_at}`);
+              console.log(`Updated:       ${c.updated_at}`);
+              console.log(`Status:        ${c.update_source || 'N/A'}`);
+              if (c.list_memberships?.length) {
+                console.log(`Lists (${c.list_memberships.length}): ${c.list_memberships.join(', ')}`);
+              }
+              if (c.taggings?.length) {
+                console.log(`Tags:          ${c.taggings.join(', ')}`);
+              }
+              if (c.custom_fields?.length) {
+                console.log('Custom Fields:');
+                c.custom_fields.forEach(f => console.log(`  ${f.custom_field_id}: ${f.value}`));
+              }
+              console.log('==================================\n');
+            });
+          });
+
+          req.on('error', err => { console.error(err.message); process.exit(1); });
+          req.end();
+          EOF
+        env:
+          CC_ACCESS_TOKEN: ${{ secrets.CC_ACCESS_TOKEN }}
